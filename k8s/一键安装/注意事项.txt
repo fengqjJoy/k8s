@@ -1,0 +1,7 @@
+服务器准备：
+1、修改hostname，主机名称不能一样
+2、修改ip域名
+echo "192.168.1.207  cluster-endpoint" >> /etc/hosts
+
+如脚本不能执行，提示无此命令可去空格
+sed 's/\r//' -i installk8s-master.sh
