@@ -1,4 +1,13 @@
 #!/bin/bash
+#请注意：masterip为主节点ip  masterdomainname为主节点自定义域名
+masterip=192.168.1.207
+masterdomainname=cluster-endpoint
+#所有机器添加master域名映射，以下需要修改为自己的
+echo "$masterip $masterdomainname" >> /etc/hosts
+
+#各个机器设置自己的主机名
+hostnamectl set-hostname master207
+hostname $hostname
 #配置阿里云的docker源
 yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo
 #安装docker
@@ -10,16 +19,15 @@ sudo mkdir -p /etc/docker
 
 sudo tee /etc/docker/daemon.json <<-'EOF'
 {
-  "registry-mirrors": ["https://sd0zlm2p.mirror.aliyuncs.com"]
+  "registry-mirrors": ["https://sd0zlm2p.mirror.aliyuncs.com"],
+  "exec-opts": ["native.cgroupdriver=systemd"]
 }
 EOF
 
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 
-#各个机器设置自己的域名
-hostnamectl set-hostname master207
-hostname $hostname
+
 
 # 将 SELinux 设置为 permissive 模式（相当于将其禁用）
 sudo setenforce 0
@@ -40,6 +48,7 @@ net.bridge.bridge-nf-call-iptables = 1
 EOF
 sudo sysctl --system
 
+echo 1 > /proc/sys/net/ipv4/ip_forward
 #安装kubelet、kubeadm、kubectl
 
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
@@ -81,11 +90,10 @@ done
 EOF
 
 chmod +x ./images.sh && ./images.sh
-#所有机器添加master域名映射，以下需要修改为自己的
-echo "192.168.1.207  cluster-endpoint" >> /etc/hosts
+
 #主节点初始化（执行错误时，可重置kubeadm reset）
 kubeadm init \
---apiserver-advertise-address=192.168.1.207 \
+--apiserver-advertise-address=$masterip \
 --control-plane-endpoint=cluster-endpoint \
 --image-repository registry.cn-hangzhou.aliyuncs.com/lfy_k8s_images \
 --kubernetes-version v1.20.9 \
