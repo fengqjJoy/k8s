@@ -1,0 +1,53 @@
+重新部署控制台命令：
+kubectl delete -f recommended.yaml
+kubectl apply -f recommended.yaml
+
+kubectl get pod -A
+部署dashboard
+先修改188和277行的主节点名称，将控制台部署到主节点，然后执行
+kubectl apply -f recommended.yaml
+
+设置访问端口
+kubectl edit svc kubernetes-dashboard -n kubernetes-dashboard
+type: ClusterIP 改为 type: NodePort
+
+## 找到端口，在安全组放行
+kubectl get svc -A |grep kubernetes-dashboard
+
+
+#创建访问账号，准备一个yaml文件； vi dash.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+  
+  
+  
+#创建
+kubectl apply -f dash.yaml
+
+#获取访问令牌
+kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa/admin-user -o jsonpath="{.secrets[0].name}") -o go-template="{{.data.token | base64decode}}"
+
+#故障
+kubectl -n troubleshooting describe pod  [podname]
+kubectl describe pod  《podname》
+kubect logs
+试kuboard 和 rancher
+
+
+
